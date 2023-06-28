@@ -26,13 +26,14 @@ workStateSens1 <- sensemakr(model = workStateReg,
                            kd=c(.5,1,1.5))
 
 
-workStateRegPoly <- lm(update(covForm,Scale_Score7S~Z*poly(perWorked,3)+.+posPart(pretestC+1)+class-virtual),
+workStateRegPoly <- lm(update(covForm,Scale_Score7S~Z*poly(perWorked,3,raw=TRUE)+.+posPart(pretestC+1)+class-virtual),
                       data=datState)
 anova(workStateRegPoly,refMod)
 anova(workStateRegPoly,workStateReg)
 
 diagPlots(workStateRegPoly)
 nonLinPlot(workStateRegPoly,"perWorked")
+#ggsave('perWorkEffectState.jpg')
 
 workStateRegSpline <- lm(update(covForm,Scale_Score7S~Z*splines::ns(perWorked,3)+.+posPart(pretestC+1)+class-virtual),
                       data=datState)
@@ -94,6 +95,8 @@ anova(workStateRegPolyGPS,update(workStateRegPolyGPS,.~.-Z:poly(perWorked,3)))
 diagPlots(workStateRegPolyGPS)
 nonLinPlot(workStateRegPolyGPS,"perWorked")
 
+workMod <- update(workAll2,data=datState)
+save(workStateReg,workStateSens1,workStateRegPoly,workStateRegSpline,workMod,file="results/workStateMods.RData")
 
 med <- mediate(model.m=update(workAll2,data=datState),model.y=workStateReg,treat="Z",mediator="perWorked",data=datState)
 

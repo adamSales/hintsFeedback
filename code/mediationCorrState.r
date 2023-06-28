@@ -35,18 +35,18 @@ round(sens,3)
 
 refMod <- update(corrStateReg,.~.-Z*perCorr+Z)
 
-diagPlots(corrStateReg)
+#diagPlots(corrStateReg)
 
 corrStateRegPoly <- update(corrStateReg,.~.-Z*perCorr+Z*poly(perCorr,3))
 anova(corrStateRegPoly,refMod)
 anova(corrStateRegPoly,corrStateReg)
 
-diagPlots(corrStateRegPoly)
+#diagPlots(corrStateRegPoly)
 nonLinPlot(corrStateRegPoly,"perCorr")
 
 corrStateRegSpline <- update(corrStateReg,.~.-Z*perCorr+Z*splines::ns(perCorr,3))
 
-diagPlots(corrStateRegSpline)
+#diagPlots(corrStateRegSpline)
 nonLinPlot(corrStateRegSpline,"perCorr")
 
 anova(corrStateRegSpline,refMod)
@@ -92,9 +92,11 @@ anova(corrStateRegPolyGPS,corrStateRegPoly)
 anova(corrStateRegPolyGPS,refMod)
 anova(corrStateRegPolyGPS,update(corrStateRegPolyGPS,.~.-Z:poly(perCorr,3)))
 
-diagPlots(corrStateRegPolyGPS)
+#diagPlots(corrStateRegPolyGPS)
 nonLinPlot(corrStateRegPolyGPS,"perCorr")
 
+
+save(corrAll2,corrStateReg,corrStateSens1,sens,corrStateRegPoly,corrStateRegSpline,file='results/corrStateRegressions.RData')
 
 med <- mediate(model.m=corrAll2,model.y=corrStateReg,treat="Z",mediator="perCorr",data=datCorrState)
 

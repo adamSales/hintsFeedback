@@ -11,39 +11,8 @@ post2=lm(as.formula(paste0("postS~Z+",paste(adj$Post,collapse="+"),"+class")),da
 postAll=lm(update(covForm,postS~Z+.+class-virtual),data=datPost)
 
 ### diagnostic plots
-mmAll <- model.matrix(postAll)
-diagnosticAll <-
-  data.frame(x=fitted(postAll),y=resid(postAll),nn='main')
+#diagPlots(postAll)
 
-for(i in 2:ncol(mmAll))
-  if(n_distinct(mmAll[,i])>2){
-    mod1=lm(datPost$postS~mmAll[,-i])
-    mod2=lm(mmAll[,i]~mmAll[,-i])
-    diagnosticAll <-
-      bind_rows(diagnosticAll,
-                data.frame(x=resid(mod2),y=resid(mod1),
-                           nn=colnames(mmAll)[i]))
-    }
-
-diagnosticAll%>%
-  filter(nn!="main")%>%
-  ggplot(aes(x,y))+geom_jitter()+geom_smooth(se=FALSE)+
-  geom_hline(yintercept=0)+
-  facet_wrap(~nn,scales="free")
-
-diagnosticAll%>%
-  filter(nn=="main")%>%
-  ggplot(aes(x,y))+geom_jitter()+geom_smooth(se=FALSE)+
-  geom_hline(yintercept=0)+
-  labs(x="residuals",y="fitted values")
-
-datPost%>%
-  mutate(Z=as.factor(Z))%>%
-  group_by(pretestC,Z)%>%
-  summarize(Y=mean(postS,na.rm=TRUE),n=n())%>%
-  ggplot(aes(pretestC,Y,color=Z))+
-  geom_point(aes(size=n))+
-  geom_smooth()
 
 posPart=function(x) ifelse(x>0,x,0)
 
@@ -101,3 +70,5 @@ list(post0,post2,postAll2,postLin)%>%
     map(~update(.,subset=datPost$hasBothtest))%>%
   map(coefci,"Z",vcov.=vcovHC,type='HC')%>%
    map(round,digits=3)%>%do.call("rbind",.)
+
+save(post0,post2,postAll2,postLin,LOOP,postML,file='results/postTestMods.RData')

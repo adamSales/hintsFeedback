@@ -21,20 +21,20 @@ summary(workPostSens1)
 
 refMod <- update(workPostReg,.~.-Z*perWorked+Z)
 
-diagPlots(workPostReg)
+#diagPlots(workPostReg)
 
-workPostRegPoly <- lm(update(covForm,postS~Z*poly(perWorked,3)+.+posPart(pretestC+1)+class-virtual),
+workPostRegPoly <- lm(update(covForm,postS~Z*poly(perWorked,3,raw=TRUE)+.+posPart(pretestC+1)+class-virtual),
                       data=datPost)
 anova(workPostRegPoly,refMod)
 anova(workPostRegPoly,workPostReg)
 
-diagPlots(workPostRegPoly)
+#diagPlots(workPostRegPoly)
 nonLinPlot(workPostRegPoly,"perWorked")
 
 workPostRegSpline <- lm(update(covForm,postS~Z*splines::ns(perWorked,3)+.+posPart(pretestC+1)+class-virtual),
                       data=datPost)
 
-diagPlots(workPostRegSpline)
+#diagPlots(workPostRegSpline)
 nonLinPlot(workPostRegSpline,"perWorked")
 
 anova(workPostRegSpline,refMod)
@@ -80,8 +80,11 @@ anova(workPostRegPolyGPS,workPostRegPoly)
 anova(workPostRegPolyGPS,refMod)
 anova(workPostRegPolyGPS,update(workPostRegPolyGPS,.~.-Z:poly(perWorked,3)))
 
-diagPlots(workPostRegPolyGPS)
+#diagPlots(workPostRegPolyGPS)
 nonLinPlot(workPostRegPolyGPS,"perWorked")
+
+workEffectPost <- update(workAll2,data=datPost)
+save(workPostReg,workPostSens1,workPostRegPoly,workPostRegSpline,workEffectPost,file="results/workPostModels.RData")
 
 
 med <- mediate(model.m=update(workAll2,data=datPost),model.y=workPostReg,treat="Z",mediator="perWorked",data=datPost)

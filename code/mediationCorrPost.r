@@ -2,7 +2,8 @@ library(mediation)
 library(sensemakr)
 
 ### re-estimate effect on PerCorr for posttest dataset
-datCorrPost <- dat%>%filter(hasPerCorr&hasPosttest)%>%group_by(class)%>%
+datCorrPost <- dat%>%filter(hasPerCorr&hasPosttest)%>%group_by(
+                                                        class)%>%
   mutate(pz=mean(Z))%>%ungroup()%>%filter(pz<1,pz>0)%>%mutate(class=as.factor(class))
 
 
@@ -34,18 +35,19 @@ summary(corrPostSens1)
 
 refMod <- update(corrPostReg,.~.-Z*perCorr+Z)
 
-diagPlots(corrPostReg)
+#diagPlots(corrPostReg)
 
 corrPostRegPoly <- update(corrPostReg,.~.-Z*perCorr+Z*poly(perCorr,3))
 anova(corrPostRegPoly,refMod)
 anova(corrPostRegPoly,corrPostReg)
 
-diagPlots(corrPostRegPoly)
+#diagPlots(corrPostRegPoly)
 nonLinPlot(corrPostRegPoly,"perCorr")
+ggsave('results/corrPostPolynomial.jpg')
 
 corrPostRegSpline <- update(corrPostReg,.~.-Z*perCorr+Z*splines::ns(perCorr,3))
 
-diagPlots(corrPostRegSpline)
+#diagPlots(corrPostRegSpline)
 nonLinPlot(corrPostRegSpline,"perCorr")
 
 anova(corrPostRegSpline,refMod)
@@ -94,9 +96,10 @@ anova(corrPostRegPolyGPS,corrPostRegPoly)
 anova(corrPostRegPolyGPS,refMod)
 anova(corrPostRegPolyGPS,update(corrPostRegPolyGPS,.~.-Z:poly(perCorr,3)))
 
-diagPlots(corrPostRegPolyGPS)
+#diagPlots(corrPostRegPolyGPS)
 nonLinPlot(corrPostRegPolyGPS,"perCorr")
 
+save(corrAll2,corrPostReg,corrPostSens1,sens,corrPostRegPoly,corrPostRegSpline,file='results/corPostModels.RData')
 
 med <- mediate(model.m=update(corrAll2,data=datPost),model.y=corrPostReg,treat="Z",mediator="perCorr",data=datPost)
 

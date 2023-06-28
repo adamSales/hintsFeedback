@@ -10,7 +10,7 @@ work1=lm(perWorked~Z+Scale_Score5imp+pretestC+class,datP)
 workAll=lm(update(covForm,perWorked~Z+.+class-virtual),data=datP)
 
 ### diagnostic plots
-diagPlots(workAll)
+#diagPlots(workAll)
 
 datP%>%
   mutate(Z=as.factor(Z))%>%
@@ -72,7 +72,9 @@ list(work0,workAll2,workLin)%>%
   map(coeftest,vcov.=vcovHC,type='HC')%>%
    map_dfr(function(x) round(x['Z',],3))
 
-list(work0,workAll2,work@Lin)%>%
+list(work0,workAll2,workLin)%>%
     map(~update(.,subset=datP$hasBothtest))%>%
   map(coefci,"Z",vcov.=vcovHC,type='HC')%>%
    map(round,digits=3)%>%do.call("rbind",.)
+
+save(work0,workAll2,workLin,workML,LOOP,file='results/workModels.RData')

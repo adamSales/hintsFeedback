@@ -20,48 +20,7 @@ corr1=lm(perCorr~Z+Scale_Score5imp+pretestC+class,datCorr)
 corrAll=lm(update(covForm,perCorr~Z+.+class-virtual),data=datCorr)
 
 ### diagnostic plots
-mmAll <- model.matrix(corrAll)
-diagnosticAll <-
-  data.frame(x=fitted(corrAll),y=resid(corrAll),nn='main')
-
-for(i in 2:ncol(mmAll))
-  if(n_distinct(mmAll[,i])>2){
-    mod1=lm(datCorr$perCorr~mmAll[,-i])
-    mod2=lm(mmAll[,i]~mmAll[,-i])
-    diagnosticAll <-
-      bind_rows(diagnosticAll,
-                data.frame(x=resid(mod2),y=resid(mod1),
-                           nn=colnames(mmAll)[i]))
-    }
-
-diagnosticAll%>%
-  filter(nn!="main")%>%
-  ggplot(aes(x,y))+geom_jitter()+geom_smooth(se=FALSE)+
-  geom_hline(yintercept=0)+
-  facet_wrap(~nn,scales="free")
-
-diagnosticAll%>%
-  filter(nn=="main")%>%
-  ggplot(aes(x,y))+geom_jitter()+geom_smooth(se=FALSE)+
-  geom_hline(yintercept=0)+
-  labs(x="residuals",y="fitted values")
-
-datCorr%>%
-  mutate(Z=as.factor(Z))%>%
-  group_by(pretestC,Z)%>%
-  summarize(Y=mean(perCorr,na.rm=TRUE),n=n())%>%
-  ggplot(aes(pretestC,Y,color=Z))+
-  geom_point(aes(size=n))+
-  geom_smooth()
-
-datCorr%>%
-  mutate(Z=as.factor(Z))%>%
-  group_by(Scale_Score5imp,Z)%>%
-  summarize(Y=mean(perCorr,na.rm=TRUE),n=n())%>%
-  ggplot(aes(Scale_Score5imp,Y,color=Z))+
-  geom_point(aes(size=n))+
-  geom_smooth()
-
+#diagPlots(corrAll)
 
 #posPart=function(x) ifelse(x>0,x,0)
 
@@ -113,3 +72,5 @@ list(corr0,corrAll,corrLin)%>%
     map(~update(.,subset=datCorr$hasBothtest))%>%
   map(coefci,"Z",vcov.=vcovHC,type='HC')%>%
    map(round,digits=3)%>%do.call("rbind",.)
+
+save(corr0,corrAll,corrLin,corrML,LOOP,file="corrModels.RData")

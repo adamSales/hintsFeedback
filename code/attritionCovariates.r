@@ -176,18 +176,18 @@ sapply(balsMed,function(x) x$overall)
 ###########################################
 ####### Table 1
 ###########################################
-tab1=map(c('Post','State','Both'),
+tab1=map(c('Post','State'),#,'Both'),
          function(test){
-           t1=table1(~Gender+`Race/Ethnicity`+accelerated+as.logical(EIP)+
+           t1=table1(~Gender+race+accelerated+as.logical(EIP)+
                        as.logical(GIFTED)+as.logical(IEP)+as.logical(virtual)|Z,
                      data=dat[dat[[paste0('has',test,'test')]],])%>%
              as.data.frame()
            names(t1)[1]='varb'
-           t1$varb=gsub("  |as.logical\\(|\\)","",t1$varb)
+           t1$varb=gsub(" |as.logical\\(|\\)","",t1$varb)
            t1=subset(t1,varb!='No')
            drop=NULL
            for(i in 1:nrow(t1))
-             if(t1$varb[i]=='Yes'){
+             if(grepl("Yes",t1$varb[i])){ #t1$varb[i]=='Yes'){
                t1$varb[i]=t1$varb[i-1]
                drop=c(drop,i-1)
              }
