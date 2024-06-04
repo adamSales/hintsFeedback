@@ -17,5 +17,6 @@ To replicate in `R`, make sure that the packages listed in [sessionInfo.txt](res
 ```
 source('code/feedbackOverall.r')
 ```
+That will generate all of the tables (in html form) and figures in the manuscript, as well as the text of the Results section
 
 A record of our exploration of alternative models can be found in [code/exploration/](code/exploration/).
