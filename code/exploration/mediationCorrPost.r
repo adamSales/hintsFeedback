@@ -2,12 +2,12 @@ library(mediation)
 library(sensemakr)
 
 ### re-estimate effect on PerCorr for posttest dataset
-datCorrPost <- dat%>%filter(hasPerCorr&hasPosttest)%>%group_by(
-                                                        class)%>%
-  mutate(pz=mean(Z))%>%ungroup()%>%filter(pz<1,pz>0)%>%mutate(class=as.factor(class))
+datCorrPost <- dat%>%filter(hasPerCorr&hasPosttest)%>%#group_by(class)%>%
+  #mutate(pz=mean(Z))%>%ungroup()%>%filter(pz<1,pz>0)%>%
+  mutate(class=as.factor(class))
 
 
-corrAll2 <- update(corrAll,data=datCorrPost)
+corrAllPost <- update(corrAll,data=datCorrPost)
 
 
 
@@ -18,6 +18,12 @@ corrAll2 <- update(corrAll,data=datCorrPost)
 posPart=function(x) ifelse(x>0,x,0)
 corrPostReg <- lm(update(covForm,postS~Z*perCorr+.+posPart(pretestC+1)+class-virtual),
                   data=datCorrPost)
+
+corrPostReg0 <- lm(update(covForm,postS~Z*perCorr+.+class-virtual),
+                  data=datCorrPost)
+
+coeftest(corrPostReg,vcovHC,type='HC')[c('Z','Z:perCorr','perCorr'),]
+coeftest(corrPostReg0,vcovHC,type='HC')[c('Z','Z:perCorr','perCorr'),]
 
 corrPostSens1 <- sensemakr(model = corrPostReg,
                                 treatment = "perCorr",

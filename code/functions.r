@@ -30,7 +30,8 @@ balPlot <- function(x,trtVar='Z',data,...){
                 scale_y_continuous(labels=scales::percent)
         }
         else if(is.factor(ddd$cc)|is.character(ddd$cc)|n_distinct(ddd$cc)<7){
-            plots[[cc]] <- ggplot(ddd,aes(x=Z,fill=cc))+geom_bar(position='fill')+
+          plots[[cc]] <- ggplot(ddd,aes(x=Z,fill=cc))+geom_bar(position='fill')+
+              theme(legend.title=element_blank())+
                 scale_y_continuous(labels=scales::percent)
         }
         else{
@@ -109,6 +110,8 @@ plotWWC=function(ov,diff,labs,wwc,...){
   polygon(c(0,wwc[[1]],65),c(0,wwc$Differential1,0),col="yellow")
   polygon(c(0,wwc[[1]]),c(0,wwc$Differential0),col="green")
 
+  text(c(6,6,60),c(2,8,10),c('Meets\nConservative\nStandard','Meets\nLiberal\nStandard','High\nAttrition'))
+
   if(all(ov<1)) ov <- ov*100
   diff <- abs(diff)
   if(all(diff< 1)) diff <- diff*100
@@ -184,4 +187,131 @@ nonLinPlot <- function(mod,x){
                      fit=pred,lwr=pred-2*sepred,upr=pred+2*sepred)
   yhat%>%ggplot(aes(xx,fit,color=Z,fill=Z,group=Z,ymin=lwr,ymax=upr))+
     geom_line()+geom_ribbon(alpha=0.2)+xlab(x)
+}
+
+
+regTabFunc <- function(regList,Title=''){
+  inf <- regList%>%map(coeftest,vcov.=vcovHC,type='HC')
+  cis <- regList%>%map(coefci,vcov.=vcovHC,type='HC')
+  dfs <- regList%>%map(~if(length(.$df.residual)) .$df.residual else NA)
+
+  tab <-
+    stargazer(regList,
+              se=map(inf,~.[,2]),
+              p=map(inf,~.[,4]),
+              ci=FALSE,
+              single.row=FALSE,
+              omit=c("class","as.factor(pretestC)"),
+              digits=3,
+              star.cutoffs=c(.05,0.01,0.001),
+              intercept.bottom=FALSE,
+            title=Title,omit.stat=c("ser","f"))
+
+
+  tab <- gsub("perWorked","\\\\% Probs. Worked",tab)
+  tab <- gsub("perCorr","\\\\% Correct 1st Try",tab)
+  tab <- gsub('postS','Posttest',tab)
+  tab <- gsub('Scale\\\\_Score7S','State Test',tab)
+
+
+  if(any(grepl("(1)",tab,fixed=TRUE)))
+    tab <- tab[-grep("(1)",tab,fixed=TRUE)]
+  if(any(grepl("& & & & \\\\",tab,fixed=TRUE)))
+    tab <- tab[-grep("& & & & \\\\",tab,fixed=TRUE)]
+
+  capRow <- grep('caption',tab)|>{\(x) if(length(x)==0) length(tab)+1 else x}()
+  tab[-capRow] <- gsub('(','[',tab[-capRow],fixed=TRUE)
+  tab[-capRow] <- gsub(')',']',tab[-capRow],fixed=TRUE)
+
+  tab <- gsub("pre\\\\_MA\\\\_total\\\\_scoreimp","Math Anx.",tab)
+  tab <- gsub(" pre\\\\_MSE\\\\_total\\\\_scoreimp", "Math Self Eff.",tab)
+  tab <- gsub("pre\\\\_PS\\\\_tasks\\\\_total\\\\_scoreimp","Perc. Sens.",tab)
+  tab <- gsub("Z &","Immediate Feedback &",tab)
+  tab <- gsub("Z:","Immediate Feedback:",tab,fixed=TRUE)
+
+  tab <- gsub("pretestC","Pretest",tab)
+  tab <- gsub("Scale\\\\_Score5imp","State Test 5th Gr.",tab)
+  tab <- gsub(" ScaleScore5miss","Missing 5th Gr.",tab)
+  tab <- gsub("race","",tab)
+  tab <- gsub("logTime","log(Pretest Time)",tab)
+  tab <- gsub("pretestMiss","Missing Pretest",tab)
+
+  attr(tab,"inf") <- inf
+  attr(tab,"cis") <- cis
+  attr(tab,"dfs") <- dfs
+  tab
+}
+
+
+sensReport <- function(sss,...){
+  sss$bounds <- NULL
+  tab <- ovb_minimal_reporting(sss,format='pure_html',verbose=FALSE)
+  tab <- gsub("pretestC","Pretest",tab)
+  tab <- gsub("perWorked","\\\\% Probs. Worked",tab)
+  tab <- gsub("perCorr","\\\\% Correct 1st Try",tab)
+  tab <- gsub('postS','Posttest',tab)
+  tab <- gsub('Scale\\\\_Score7S','State Test',tab)
+
+  tab <- gsub('\\%','%',tab,fixed=TRUE)
+
+  tab
+}
+
+
+boundsTable <- function(x,digits=2){
+  tab <- x$bounds
+
+  mbound <- min(which(tab$adjusted_lower_CI<0) )
+
+  tab <- if(mbound>3) tab[c(1:2,(mbound-1),mbound),] else tab[1:3,]
+
+  outcome <- x$info$formula[[2]]%>%as.character()
+  outcome <- gsub('postS','Posttest',outcome)
+  outcome <- gsub('Scale_Score7S','State Test',outcome)
+  tab$outcome <- c(outcome,rep('',nrow(tab)-1))
+
+
+  tab$bound_label <- gsub("pretestC","Pretest",tab$bound_label)
+  tab$treatment <- gsub("perWorked","% Probs. Worked",tab$treatment)
+  tab$treatment <- gsub("perCorr","% Correct 1st Try",tab$treatment)
+  tab$mediator <- if(outcome=='Posttest') c(tab$treatment[1],rep('',nrow(tab)-1)) else ''
+  tab$treatment <- NULL
+
+  adjT <- tab$adjusted_t
+  tab <- tab%>%
+    mutate(across(starts_with('adj'),~.*100))
+
+  tab$adjusted_CI <- tab[,c('adjusted_lower_CI','adjusted_upper_CI')]%>%
+    as.matrix()%>%
+    apply(1,prtci,digits=digits)%>%
+    paste0(stars(2*pnorm(-abs(adjT))))
+
+  tab$adjusted_lower_CI <- tab$adjusted_upper_CI <- NULL
+
+  tab <- select(tab,mediator,outcome,benchmark=bound_label,everything(),-adjusted_t)
+
+  names(tab) <-
+    c('Mediator','Outcome','Benchmark',
+      '<span class="math inline"><em>R</em><sup>2</sup><sub><em>D</em>&#126;<em>Z</em>|<em>X</em></sub></span>',
+      '<span class="math inline"><em>R</em><sup>2</sup><sub><em>Y</em>&#126;<em>Z</em>|<em>D</em>,<em>X</em></sub></span>',
+      #'$R^2_{D\\sim Z|X}$',
+              #    '$R^2_{Y\\sim Z|D,X}$',
+                  'Adj. Est.','Adj. SE','Adj. CI')
+
+  tab
+}
+
+getEff <- function(regTab,whch,cov='Z',digits=3,mult=1){
+  inf <- attributes(regTab)$inf[[whch]][cov,]
+  ci <- attributes(regTab)$cis[[whch]][cov,]*mult
+  df <- attributes(regTab)$dfs[[whch]]
+
+  delta <- fround(inf['Estimate']*mult,digits=digits)
+
+  pval <- if(inf['Pr(>|t|)']<0.001) 'p<0.001' else paste0( 'p=',fround(inf['Pr(>|t|)'],digits=digits))
+
+  INF <- paste0('($t_{',df,'}$=',fround(inf['t value'],digits=digits),
+                ', ',pval,
+                ', 95% CI [',fround(ci[1],digits=digits),',',fround(ci[2],digits=digits),'])')
+  c(delta=delta,inf=INF)
 }

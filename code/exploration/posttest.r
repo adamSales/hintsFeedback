@@ -1,7 +1,8 @@
 ### posttest
 ##
-datPost <- dat%>%filter(hasPosttest)%>%group_by(class)%>%
-  mutate(pz=mean(Z))%>%ungroup()%>%filter(pz<1,pz>0)%>%mutate(class=as.factor(class))
+datPost <- dat%>%filter(hasPosttest)%>%#group_by(class)%>%
+                                        #mutate(pz=mean(Z))%>%ungroup()%>%filter(pz<1,pz>0)%>%
+  mutate(class=as.factor(class))
 
 post0=lm(postS~Z+class,datPost)
 

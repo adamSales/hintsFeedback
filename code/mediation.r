@@ -1,83 +1,26 @@
-library(mediation)
-library(SuperLearner)
-library(tmle)
-#### does perWorked affect posttest?
 
-### regression estimator
+###########################################################
+####### Actual mediation analyses
+###########################################################
+if(!exists("workMedMods")|!exists("corrMedMods")) load('results/regressions.RData')
+attach(workMedMods)
+attach(corrMedMods)
 
-posPart=function(x) ifelse(x>0,x,0)
-workPostReg <- lm(update(covForm,postS~Z*perWorked+.+posPart(pretestC+1)+class-virtual),
-                  data=datPost)
+vcov <- function(object,...) vcovHC(object,type='HC0',...)
+medWorkPost <- mediate(model.m=workPost,model.y=workPostReg,treat="Z",mediator="perWorkedC",data=dat,subset=hasPosttest)
+medWorkState <- mediate(model.m=workState,model.y=workStateReg,treat="Z",mediator="perWorkedC",data=dat,subset=hasStatetest)
+medCorrPost <- mediate(model.m=corrPost,model.y=corrPostReg,treat="Z",mediator="perCorrC",data=dat,subset=hasPosttest&hasPerCorr)
+medCorrState <- mediate(model.m=corrState,model.y=corrStateReg,treat="Z",mediator="perCorrC",data=dat,subset=hasStatetest&hasPerCorr)
 
-refMod <- update(workPostReg,.~.-Z*perWorked+Z)
-
-diagPlots(workPostReg)
-
-workPostRegPoly <- lm(update(covForm,postS~Z*poly(perWorked,3)+.+posPart(pretestC+1)+class-virtual),
-                      data=datPost)
-anova(workPostRegPoly,refMod)
-anova(workPostRegPoly,workPostReg)
-
-diagPlots(workPostRegPoly)
-nonLinPlot(workPostRegPoly,"perWorked")
-
-workPostRegSpline <- lm(update(covForm,postS~Z*splines::ns(perWorked,3)+.+posPart(pretestC+1)+class-virtual),
-                      data=datPost)
-
-diagPlots(workPostRegSpline)
-nonLinPlot(workPostRegSpline,"perWorked")
-
-anova(workPostRegSpline,refMod)
-anova(workPostRegSpline,workPostReg)
+detach(workMedMods)
+detach(corrMedMods)
 
 
-## GPS
-## gps <- SuperLearner(datPost$perWorked,model.frame(update(covForm,Z~.+class),data=datPost),
-##                     SL.library=c('SL.bayesglm','SL.glmnet','SL.gam','SL.ranger'))
+save(medWorkPost,medWorkState,medCorrPost,medCorrState,file='results/mediations.RData')
 
+## medSensWorkPost <- medsens(medWorkPost)
+## medSensWorkState <- medsens(medWorkState)
+## medSensCorrPost <- medsens(medCorrPost)
+## medSensCorrState <- medsens(medCorrState)
 
-## qqnorm(datPost$perWorked-gps$SL.predict)
-## qqline(datPost$perWorked-gps$SL.predict)
-## hist(datPost$perWorked-gps$SL.predict)hist(datPost$perWorked-gps$SL.predict)
-## mean(datPost$perWorked-gps$SL.predict)
-## mean((datPost$perWorked-gps$SL.predict)^2)
-## 1-mean((datPost$perWorked-gps$SL.predict)^2)/var(datPost$perWorked)
-
-gpsLM <- lm(update(covForm,perWorked~Z+.),data=datPost)
-
-## datPost$gps <- gps$SL.predict
-## datPost$gps2 <- dnorm(datPost$perWorked,datPost$gps,sd(datPost$perWorked-datPost$gps))
-## lm_robust(pretestC~perWorked,data=datPost,fixed_effects=class)
-## lm_robust(pretestC~perWorked+gps,data=datPost,fixed_effects=class)
-## lm_robust(pretestC~perWorked+gps2,data=datPost,fixed_effects=class)
-## lm_robust(pretestC~perWorked+fitted(gpsLM),data=datPost,fixed_effects=class)
-
-datPost$gps <- fitted(gpsLM)
-pvals <- NULL
-covs <- model.matrix(update(covForm,.~.+Z-virtual),data=datPost)
-for(k in 2:ncol(covs)){
-  cc <- scale(covs[,k])
-  mod0 <- lm_robust(cc~perWorked,
-                   data=datPost,fixed_effects=class)
-  mod <- lm_robust(cc~perWorked+gps,
-                   data=datPost,fixed_effects=class)
-  pvals[colnames(covs)[k]] <- mod$p.value['perWorked']
-  eff[colnames(covs)[k]] <- mod$coef['perWorked']
-}
-
-workPostRegPolyGPS <- update(workPostRegPoly,.~.+gps+I(gps^2)+I(gps^3))
-anova(workPostRegPolyGPS,workPostRegPoly)
-anova(workPostRegPolyGPS,refMod)
-anova(workPostRegPolyGPS,update(workPostRegPolyGPS,.~.-Z:poly(perWorked,3)))
-
-diagPlots(workPostRegPolyGPS)
-nonLinPlot(workPostRegPolyGPS,"perWorked")
-
-
-med <- mediate(model.m=update(workAll2,data=datPost),model.y=workPostReg,treat="Z",mediator="perWorked",data=datPost)
-
-sens <- medsens(med)
-
-summary(sens)
-
-save(med,sens,file="results/mediationPerWorked.RData")
+## save(medSensWorkPost,medSensWorkState,medSensCorrPost,medSensCorrState,file='results/mediationSensitivity.RData')

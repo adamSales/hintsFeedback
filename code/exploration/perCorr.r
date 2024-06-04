@@ -18,6 +18,19 @@ corr0=lm(perCorr~Z+class,datCorr)
 corr1=lm(perCorr~Z+Scale_Score5imp+pretestC+class,datCorr)
 
 corrAll=lm(update(covForm,perCorr~Z+.+class-virtual),data=datCorr)
+diagPlots(corrAll)
+
+corrAll2 <- update(corrAll,.~.+posPart(Scale_Score5imp-625))
+diagPlots(corrAll2)
+
+corrAll3 <- update(corrAll,.~.-Scale_Score5imp+splines::ns(Scale_Score5imp,5))
+diagPlots(corrAll3)
+arm::binnedplot(datCorr$Scale_Score5imp,resid(corrAll3))
+
+### does it make a difference?
+coeftest(corrAll,vcovHC,type='HC')['Z',]
+coeftest(corrAll3,vcovHC,type='HC')['Z',]
+
 
 ### diagnostic plots
 #diagPlots(corrAll)

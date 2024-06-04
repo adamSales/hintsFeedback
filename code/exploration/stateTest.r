@@ -1,7 +1,8 @@
 ### statetest
 ##
-datState <- dat%>%filter(hasStatetest)%>%group_by(class)%>%
-  mutate(pz=mean(Z))%>%ungroup()%>%filter(pz<1,pz>0)%>%mutate(class=as.factor(class))
+datState <- dat%>%filter(hasStatetest)%>%#group_by(class)%>%
+                                        #mutate(pz=mean(Z))%>%ungroup()%>%filter(pz<1,pz>0)%>%
+  mutate(class=as.factor(class))
 
 state0=lm(Scale_Score7S~Z+class,datState)
 
@@ -16,6 +17,10 @@ stateAll=lm(update(covForm,Scale_Score7S~Z+.+class-virtual),data=datState)
 posPart=function(x) ifelse(x>0,x,0)
 
 stateAll2=update(stateAll,.~.+posPart(pretestC+1))
+
+coeftest(stateAll,vcovHC,type='HC')['Z',]
+coeftest(stateAll2,vcovHC,type='HC')['Z',]
+
 
 data.frame(x=fitted(stateAll2),y=resid(stateAll2))%>%
    ggplot(aes(x,y))+geom_jitter()+geom_smooth(se=FALSE)+
